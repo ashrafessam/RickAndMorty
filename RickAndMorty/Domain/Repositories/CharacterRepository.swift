@@ -6,3 +6,7 @@
 //
 
 import Foundation
+
+protocol CharactersRepository {
+    func fetchCharacters(from url: URL) async throws -> CharactersPage
+}
