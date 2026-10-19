@@ -86,4 +86,94 @@ struct RickAndMortyTests {
         #expect(page.results.first?.name == "Rick Sanchez")
         #expect(page.results.first?.status == .alive)
     }
+    
+    
+    @Test
+    @MainActor
+    func apiClientThrowsErrorForServerFailure() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+
+        let session = URLSession(configuration: configuration)
+        let apiClient = APIClient(session: session)
+
+        guard let url = URL(string: "https://example.com/character") else {
+            Issue.record("Invalid test URL")
+            return
+        }
+
+        MockURLProtocol.requestHandler = { request in
+            guard let requestURL = request.url,
+                  let response = HTTPURLResponse(
+                      url: requestURL,
+                      statusCode: 500,
+                      httpVersion: nil,
+                      headerFields: nil
+                  ) else {
+                throw URLError(.badServerResponse)
+            }
+
+            return (response, Data("Server error".utf8))
+        }
+
+        do {
+            let _ = try await apiClient.request(
+                from: url,
+                as: CharactersPage.self
+            )
+
+            Issue.record("Expected HTTP 500 error, but request succeeded")
+        } catch let error as APIError {
+            if case .httpError(statusCode: 500) = error {
+                #expect(true)
+            } else {
+                Issue.record("Unexpected APIError: \(error)")
+            }
+        }
+    }
+    
+    
+    @Test
+    @MainActor
+    func apiClientThrowsErrorForInvalidJSON() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+
+        let session = URLSession(configuration: configuration)
+        let apiClient = APIClient(session: session)
+
+        guard let url = URL(string: "https://example.com/character") else {
+            Issue.record("Invalid test URL")
+            return
+        }
+
+        MockURLProtocol.requestHandler = { request in
+            guard let requestURL = request.url,
+                  let response = HTTPURLResponse(
+                      url: requestURL,
+                      statusCode: 200,
+                      httpVersion: nil,
+                      headerFields: ["Content-Type": "application/json"]
+                  ) else {
+                throw URLError(.badServerResponse)
+            }
+
+            return (response, Data("{ invalid json }".utf8))
+        }
+
+        do {
+            let _ = try await apiClient.request(
+                from: url,
+                as: CharactersPage.self
+            )
+
+            Issue.record("Expected decoding error, but request succeeded")
+        } catch let error as APIError {
+            if case .decodingError = error {
+                #expect(true)
+            } else {
+                Issue.record("Unexpected APIError: \(error)")
+            }
+        }
+    }
 }
