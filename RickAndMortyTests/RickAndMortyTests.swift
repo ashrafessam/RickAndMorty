@@ -8,6 +8,7 @@ import Foundation
 import Testing
 @testable import RickAndMorty
 
+@Suite(.serialized)
 struct RickAndMortyTests {
 
     @Test
@@ -125,7 +126,7 @@ struct RickAndMortyTests {
             Issue.record("Expected HTTP 500 error, but request succeeded")
         } catch let error as APIError {
             if case .httpError(statusCode: 500) = error {
-                #expect(true)
+                // expected
             } else {
                 Issue.record("Unexpected APIError: \(error)")
             }
@@ -170,10 +171,67 @@ struct RickAndMortyTests {
             Issue.record("Expected decoding error, but request succeeded")
         } catch let error as APIError {
             if case .decodingError = error {
-                #expect(true)
+                // expected
             } else {
                 Issue.record("Unexpected APIError: \(error)")
             }
         }
     }
+    
+    @Test
+    @MainActor
+    func viewModelLoadsCharactersSuccessfully() async throws {
+        let character = Character(
+            id: 1,
+            name: "Rick Sanchez",
+            status: .alive,
+            species: "Human",
+            gender: "Male",
+            origin: Character.Place(name: "Earth (C-137)"),
+            location: Character.Place(name: "Citadel of Ricks"),
+            image: URL(
+                string: "https://rickandmortyapi.com/api/character/avatar/1.jpeg"
+            ),
+            episode: ["https://rickandmortyapi.com/api/episode/1"]
+        )
+
+        let page = CharactersPage(
+            info: .init(
+                count: 1,
+                pages: 1,
+                next: nil,
+                prev: nil
+            ),
+            results: [character]
+        )
+
+        let repository = MockCharactersRepository()
+        repository.result = .success(page)
+
+        let viewModel = CharactersViewModel(repository: repository)
+
+        await viewModel.fetchCharacters()
+
+        #expect(viewModel.characters.count == 1)
+        #expect(viewModel.characters.first?.name == "Rick Sanchez")
+        #expect(viewModel.isLoading == false)
+        #expect(viewModel.errorMessage == nil)
+    }
+
+    
+    @Test
+    @MainActor
+    func viewModelHandlesRepositoryError() async {
+        let repository = MockCharactersRepository()
+        repository.result = .failure(APIError.emptyResponse)
+
+        let viewModel = CharactersViewModel(repository: repository)
+
+        await viewModel.fetchCharacters()
+
+        #expect(viewModel.characters.isEmpty)
+        #expect(viewModel.isLoading == false)
+        #expect(viewModel.errorMessage != nil)
+    }
+
 }
