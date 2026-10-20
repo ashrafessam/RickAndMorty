@@ -449,5 +449,61 @@ struct RickAndMortyTests {
         #expect(!viewModel.isLoadingNextPage)
     }
 
+    
+    @Test
+    @MainActor
+    func viewModelFallsBackToCachedCharactersWhenRequestFails() async {
+        let repository = await MainActor.run {
+            let repository = MockCharactersRepository()
+            repository.result = .failure(APIError.emptyResponse)
+            repository.cachedCharacters = [
+                Character(
+                    id: 1,
+                    name: "Rick Sanchez",
+                    status: .alive,
+                    species: "Human",
+                    gender: "Male",
+                    origin: .init(name: "Earth"),
+                    location: .init(name: "Earth"),
+                    image: URL(string: "https://example.com/rick.png"),
+                    episode: []
+                )
+            ]
+            return repository
+        }
+
+        let viewModel = await MainActor.run {
+            CharactersViewModel(repository: repository)
+        }
+
+        await viewModel.fetchCharacters()
+
+        #expect(viewModel.characters.count == 1)
+        #expect(viewModel.characters.first?.name == "Rick Sanchez")
+        #expect(viewModel.errorMessage == nil)
+        #expect(viewModel.nextPageURL == nil)
+    }
+
+    
+    @Test
+    @MainActor
+    func viewModelShowsErrorWhenRequestAndCacheBothFail() async {
+        let repository = await MainActor.run {
+            let repository = MockCharactersRepository()
+            repository.result = .failure(APIError.emptyResponse)
+            repository.cachedCharacters = []
+            return repository
+        }
+
+        let viewModel = await MainActor.run {
+            CharactersViewModel(repository: repository)
+        }
+
+        await viewModel.fetchCharacters()
+
+        #expect(viewModel.characters.isEmpty)
+        #expect(viewModel.errorMessage != nil)
+    }
+
 
 }

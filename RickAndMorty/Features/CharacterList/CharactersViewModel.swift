@@ -121,7 +121,20 @@ final class CharactersViewModel {
             paginationErrorMessage = nil
             refreshErrorMessage = nil
         } catch {
-            errorMessage = "Failed to load characters. Please try again."
+            do {
+                let cachedCharacters = try repository.fetchCachedCharacters()
+                
+                guard !cachedCharacters.isEmpty else {
+                    errorMessage = "Failed to load characters. Please try again."
+                    return
+                }
+                
+                characters = cachedCharacters
+                nextPageURL = nil
+                errorMessage = nil
+            } catch {
+                errorMessage = "Failed to load characters. Please try again."
+            }
         }
     }
     

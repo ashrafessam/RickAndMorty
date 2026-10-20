@@ -7,6 +7,7 @@
 
 
 import SwiftUI
+import SwiftData
 
 struct CharactersView: View {
     @State private var viewModel: CharactersViewModel
@@ -166,9 +167,18 @@ struct CharactersView: View {
 }
 
 #Preview {
+    @Previewable @State var modelContext = ModelContext(
+        try! ModelContainer(for: CachedCharacter.self)
+    )
+
     let apiClient = APIClient()
-    let repository = CharactersRepositoryImpl(apiClient: apiClient)
-    
+    let localStore = CharactersLocalStore(modelContext: modelContext)
+
+    let repository = CharactersRepositoryImpl(
+        apiClient: apiClient,
+        localStore: localStore
+    )
+
     CharactersView(repository: repository)
 }
 

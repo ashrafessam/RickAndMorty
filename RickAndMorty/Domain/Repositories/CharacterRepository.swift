@@ -7,6 +7,8 @@
 
 import Foundation
 
+@MainActor
 protocol CharactersRepository {
     func fetchCharacters(from url: URL) async throws -> CharactersPage
+    func fetchCachedCharacters() throws -> [Character]
 }
