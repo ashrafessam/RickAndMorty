@@ -33,7 +33,7 @@ struct CharactersView: View {
                     } actions: {
                         Button("Retry") {
                             Task {
-                                await viewModel.retryInitialLoading()
+                                await viewModel.fetchCharacters()
                             }
                         }
                     }
