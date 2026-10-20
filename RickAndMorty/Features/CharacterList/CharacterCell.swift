@@ -6,40 +6,39 @@
 //
 
 import SwiftUI
+import Kingfisher
+
 
 struct CharacterCell: View {
-    let character: Character
+    @Environment(\.displayScale) private var displayScale
     
+    let character: Character
     
     var body: some View {
         HStack(spacing: 12) {
-            AsyncImage(url: character.image) { phase in
-                switch phase {
-                case .empty:
+            KFImage(character.image)
+                .placeholder {
                     ProgressView()
                         .frame(width: 80, height: 80)
-                    
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 80, height: 80)
-                        .clipShape(Circle())
-                    
-                case .failure:
+                }
+                .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 80, height: 80)))
+                .scaleFactor(displayScale)
+                .cancelOnDisappear(true)
+                .retry(maxCount: 4, interval: .accumulated(3))
+                .onFailure { error in
+                    print("Image failed:", error)
+                }
+                .onFailureView {
                     Image(systemName: "person.crop.square")
                         .resizable()
                         .scaledToFit()
                         .padding(20)
-                        .frame(width: 80, height: 80)
                         .foregroundStyle(.secondary)
-                        .background(.quaternary)
-                        .clipShape(Circle())
-                    
-                @unknown default:
-                    EmptyView()
                 }
-            }
+                .resizable()
+                .scaledToFill()
+                .frame(width: 80, height: 80)
+                .clipShape(Circle())
             
             VStack(alignment: .leading, spacing: 6) {
                 Text(character.name)
@@ -69,11 +68,11 @@ struct CharacterCell: View {
     private var statusColor: Color {
         switch character.status {
         case .alive:
-            .green
+                .green
         case .dead:
-            .red
+                .red
         case .unknown:
-            .gray
+                .gray
         }
     }
 }
@@ -95,6 +94,6 @@ struct CharacterCell: View {
             "https://rickandmortyapi.com/api/episode/1"
         ]
     )
-
+    
     CharacterCell(character: character)
 }

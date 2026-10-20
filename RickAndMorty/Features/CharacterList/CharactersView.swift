@@ -39,7 +39,7 @@ struct CharactersView: View {
                         ForEach(viewModel.characters) { character in
                             CharacterCell(character: character)
                                 .onAppear {
-                                    guard character.id == viewModel.characters.last?.id,
+                                    guard viewModel.characters.suffix(5).contains(where: { $0.id == character.id }),
                                           viewModel.paginationErrorMessage == nil else {
                                         return
                                     }
