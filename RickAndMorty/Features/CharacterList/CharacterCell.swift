@@ -80,21 +80,21 @@ struct CharacterCell: View {
 
 
 #Preview {
-    CharacterCell(
-        character: Character(
-            id: 1,
-            name: "Rick Sanchez",
-            status: .alive,
-            species: "Human",
-            gender: "Male",
-            origin: Character.Place(name: "Earth (C-137)"),
-            location: Character.Place(name: "Citadel of Ricks"),
-            image: URL(
-                string: "https://rickandmortyapi.com/api/character/avatar/1.jpeg"
-            ),
-            episode: [
-                "https://rickandmortyapi.com/api/episode/1"
-            ]
-        )
+    let character = Character(
+        id: 1,
+        name: "Rick Sanchez",
+        status: .alive,
+        species: "Human",
+        gender: "Male",
+        origin: Character.Place(name: "Earth (C-137)"),
+        location: Character.Place(name: "Citadel of Ricks"),
+        image: URL(
+            string: "https://rickandmortyapi.com/api/character/avatar/1.jpeg"
+        ),
+        episode: [
+            "https://rickandmortyapi.com/api/episode/1"
+        ]
     )
+
+    CharacterCell(character: character)
 }

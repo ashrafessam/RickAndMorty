@@ -35,8 +35,28 @@ struct CharactersView: View {
                         description: Text("There are no characters to display.")
                     )
                 } else {
-                    List(viewModel.characters) { character in
-                        CharacterCell(character: character)
+                    List {
+                        ForEach(viewModel.characters) { character in
+                            CharacterCell(character: character)
+                                .onAppear {
+                                    guard character.id == viewModel.characters.last?.id,
+                                          viewModel.paginationErrorMessage == nil else {
+                                        return
+                                    }
+                                    
+                                    Task {
+                                        await viewModel.loadNextPage()
+                                    }
+                                }
+                        }
+                        
+                        if viewModel.isLoadingNextPage {
+                            HStack {
+                                Spacer()
+                                ProgressView("Loading more characters...")
+                                Spacer()
+                            }
+                        }
                     }
                 }
             }
