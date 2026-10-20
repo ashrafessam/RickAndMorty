@@ -16,6 +16,7 @@ final class CharactersViewModel {
     private(set) var isLoading = false
     private(set) var errorMessage: String?
     private(set) var paginationErrorMessage: String?
+    private(set) var refreshErrorMessage: String?
     private(set) var nextPageURL: URL?
     private(set) var isLoadingNextPage = false
 
@@ -45,10 +46,17 @@ final class CharactersViewModel {
 
             characters = page.results
             nextPageURL = page.info.next.flatMap { URL(string: $0) }
+            
+            errorMessage = nil
+            paginationErrorMessage = nil
+            refreshErrorMessage = nil
         } catch {
             print("Fetch characters failed:", error)
             errorMessage = "Failed to load characters. Please try again."
         }
+    }
+    func retryInitialLoading() async {
+        await fetchCharacters()
     }
     func loadNextPage() async {
         guard !isLoading,!isLoadingNextPage,let nextPageURL else { return }
@@ -78,6 +86,7 @@ final class CharactersViewModel {
     func refreshCharacters() async {
         guard !isLoading, !isLoadingNextPage else { return }
 
+        refreshErrorMessage = nil
         do {
             print("Refresh Started")
             let page = try await repository.fetchCharacters(from: charactersURL)
@@ -86,10 +95,11 @@ final class CharactersViewModel {
             characters = page.results
             nextPageURL = page.info.next.flatMap { URL(string: $0) }
             paginationErrorMessage = nil
+            refreshErrorMessage = nil
             errorMessage = nil
         } catch {
             print("Refresh failed:", error)
-            paginationErrorMessage = "Failed to refresh characters. Please try again."
+            refreshErrorMessage = "Failed to refresh characters. Please try again."
         }
     }
 }
