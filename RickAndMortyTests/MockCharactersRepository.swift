@@ -11,10 +11,19 @@ import Foundation
 final class MockCharactersRepository: CharactersRepository {
 
     var result: Result<CharactersPage, Error>?
+    var results: [Result<CharactersPage, Error>] = []
+    private(set) var requestedURLs: [URL] = []
 
     func fetchCharacters(
         from url: URL
     ) async throws -> CharactersPage {
+        requestedURLs.append(url)
+
+        if !results.isEmpty {
+            let result = results.removeFirst()
+            return try result.get()
+        }
+
         guard let result else {
             throw APIError.emptyResponse
         }
@@ -22,3 +31,4 @@ final class MockCharactersRepository: CharactersRepository {
         return try result.get()
     }
 }
+

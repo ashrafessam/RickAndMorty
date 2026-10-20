@@ -233,5 +233,221 @@ struct RickAndMortyTests {
         #expect(viewModel.isLoading == false)
         #expect(viewModel.errorMessage != nil)
     }
+    
+    @Test
+    @MainActor
+    func viewModelRefreshesCharactersSuccessfully() async throws {
+        let character = Character(
+            id: 2,
+            name: "Morty Smith",
+            status: .alive,
+            species: "Human",
+            gender: "Male",
+            origin: .init(name: "Earth"),
+            location: .init(name: "Earth"),
+            image: nil,
+            episode: []
+        )
+
+        let page = CharactersPage(
+            info: .init(
+                count: 1,
+                pages: 1,
+                next: nil,
+                prev: nil
+            ),
+            results: [character]
+        )
+
+        let repository = MockCharactersRepository()
+        repository.result = .success(page)
+
+        let viewModel = CharactersViewModel(repository: repository)
+
+        await viewModel.refreshCharacters()
+
+        #expect(viewModel.characters.count == 1)
+        #expect(viewModel.characters.first?.name == "Morty Smith")
+        #expect(viewModel.refreshErrorMessage == nil)
+        #expect(viewModel.nextPageURL == nil)
+    }
+    
+    
+    @Test
+    @MainActor
+    func viewModelLoadsNextPageSuccessfully() async throws {
+        let firstCharacter = Character(
+            id: 1,
+            name: "Rick Sanchez",
+            status: .alive,
+            species: "Human",
+            gender: "Male",
+            origin: .init(name: "Earth"),
+            location: .init(name: "Earth"),
+            image: nil,
+            episode: []
+        )
+
+        let secondCharacter = Character(
+            id: 2,
+            name: "Morty Smith",
+            status: .alive,
+            species: "Human",
+            gender: "Male",
+            origin: .init(name: "Earth"),
+            location: .init(name: "Earth"),
+            image: nil,
+            episode: []
+        )
+
+        let nextPageURL = "https://rickandmortyapi.com/api/character?page=2"
+
+        let firstPage = CharactersPage(
+            info: .init(
+                count: 2,
+                pages: 2,
+                next: nextPageURL,
+                prev: nil
+            ),
+            results: [firstCharacter]
+        )
+
+        let secondPage = CharactersPage(
+            info: .init(
+                count: 2,
+                pages: 2,
+                next: nil,
+                prev: "https://rickandmortyapi.com/api/character?page=1"
+            ),
+            results: [secondCharacter]
+        )
+
+        let repository = MockCharactersRepository()
+        repository.results = [
+            .success(firstPage),
+            .success(secondPage)
+        ]
+
+        let viewModel = CharactersViewModel(repository: repository)
+
+        await viewModel.fetchCharacters()
+        await viewModel.loadNextPage()
+
+        #expect(viewModel.characters.count == 2)
+        #expect(viewModel.characters.map(\.name) == [
+            "Rick Sanchez",
+            "Morty Smith"
+        ])
+        #expect(viewModel.nextPageURL == nil)
+        #expect(viewModel.paginationErrorMessage == nil)
+        #expect(!viewModel.isLoadingNextPage)
+    }
+
+    
+    @Test
+    @MainActor
+    func viewModelDoesNotDuplicateCharactersAcrossPages() async throws {
+        let rick = Character(
+            id: 1,
+            name: "Rick Sanchez",
+            status: .alive,
+            species: "Human",
+            gender: "Male",
+            origin: .init(name: "Earth"),
+            location: .init(name: "Earth"),
+            image: nil,
+            episode: []
+        )
+
+        let morty = Character(
+            id: 2,
+            name: "Morty Smith",
+            status: .alive,
+            species: "Human",
+            gender: "Male",
+            origin: .init(name: "Earth"),
+            location: .init(name: "Earth"),
+            image: nil,
+            episode: []
+        )
+
+        let firstPage = CharactersPage(
+            info: .init(
+                count: 3,
+                pages: 2,
+                next: "https://rickandmortyapi.com/api/character?page=2",
+                prev: nil
+            ),
+            results: [rick]
+        )
+
+        let secondPage = CharactersPage(
+            info: .init(
+                count: 3,
+                pages: 2,
+                next: nil,
+                prev: "https://rickandmortyapi.com/api/character?page=1"
+            ),
+            results: [rick, morty]
+        )
+
+        let repository = MockCharactersRepository()
+        repository.results = [
+            .success(firstPage),
+            .success(secondPage)
+        ]
+
+        let viewModel = CharactersViewModel(repository: repository)
+
+        await viewModel.fetchCharacters()
+        await viewModel.loadNextPage()
+
+        #expect(viewModel.characters.count == 2)
+        #expect(viewModel.characters.map(\.id) == [1, 2])
+    }
+
+    
+    @Test
+    @MainActor
+    func viewModelHandlesNextPageError() async throws {
+        let rick = Character(
+            id: 1,
+            name: "Rick Sanchez",
+            status: .alive,
+            species: "Human",
+            gender: "Male",
+            origin: .init(name: "Earth"),
+            location: .init(name: "Earth"),
+            image: nil,
+            episode: []
+        )
+
+        let firstPage = CharactersPage(
+            info: .init(
+                count: 2,
+                pages: 2,
+                next: "https://rickandmortyapi.com/api/character?page=2",
+                prev: nil
+            ),
+            results: [rick]
+        )
+
+        let repository = MockCharactersRepository()
+        repository.results = [
+            .success(firstPage),
+            .failure(APIError.emptyResponse)
+        ]
+
+        let viewModel = CharactersViewModel(repository: repository)
+
+        await viewModel.fetchCharacters()
+        await viewModel.loadNextPage()
+
+        #expect(viewModel.characters.count == 1)
+        #expect(viewModel.characters.first?.name == "Rick Sanchez")
+        #expect(viewModel.paginationErrorMessage != nil)
+        #expect(!viewModel.isLoadingNextPage)
+    }
+
 
 }
