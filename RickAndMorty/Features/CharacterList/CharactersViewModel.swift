@@ -75,4 +75,21 @@ final class CharactersViewModel {
             paginationErrorMessage = "Failed to load more characters. Please try again."
         }
     }
+    func refreshCharacters() async {
+        guard !isLoading, !isLoadingNextPage else { return }
+
+        do {
+            print("Refresh Started")
+            let page = try await repository.fetchCharacters(from: charactersURL)
+            print("Refresh Completed")
+
+            characters = page.results
+            nextPageURL = page.info.next.flatMap { URL(string: $0) }
+            paginationErrorMessage = nil
+            errorMessage = nil
+        } catch {
+            print("Refresh failed:", error)
+            paginationErrorMessage = "Failed to refresh characters. Please try again."
+        }
+    }
 }

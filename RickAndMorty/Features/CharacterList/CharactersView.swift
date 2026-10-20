@@ -58,6 +58,9 @@ struct CharactersView: View {
                             }
                         }
                     }
+                    .refreshable {
+                        await viewModel.refreshCharacters()
+                    }
                 }
             }
             .navigationTitle("Characters")
