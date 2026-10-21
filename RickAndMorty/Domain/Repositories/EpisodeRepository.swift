@@ -6,3 +6,8 @@
 //
 
 import Foundation
+
+@MainActor
+protocol EpisodesRepository {
+    func fetchEpisodes(from urls: [URL]) async throws -> [Episode]
+}

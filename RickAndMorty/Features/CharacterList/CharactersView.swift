@@ -12,10 +12,11 @@ import SwiftData
 struct CharactersView: View {
     @State private var viewModel: CharactersViewModel
     
-    init(repository: any CharactersRepository) {
-        _viewModel = State(
-            initialValue: CharactersViewModel(repository: repository)
-        )
+    private let episodesRepository: any EpisodesRepository
+    
+    init(repository: any CharactersRepository,episodesRepository: any EpisodesRepository) {
+        _viewModel = State(initialValue: CharactersViewModel(repository: repository))
+        self.episodesRepository = episodesRepository
     }
     
     var body: some View {
@@ -66,22 +67,29 @@ struct CharactersView: View {
                         }
                         
                         ForEach(viewModel.filteredCharacters) { character in
-                            CharacterCell(character: character)
-                                .onAppear {
-                                    guard
-                                        character.id == viewModel.filteredCharacters.last?.id,
-                                        viewModel.nextPageURL != nil,
-                                        !viewModel.isLoadingNextPage,
-                                        viewModel.paginationErrorMessage == nil
-                                            else {
-                                        return
-                                    }
-                                    
-                                    Task {
-                                        await viewModel.loadNextPage()
-                                    }
+                            NavigationLink {
+                                CharacterDetailView(
+                                    character: character,
+                                    repository: episodesRepository
+                                )
+                            } label: {
+                                CharacterCell(character: character)
+                            }
+                            .buttonStyle(.plain)
+                            .onAppear {
+                                guard
+                                    character.id == viewModel.filteredCharacters.last?.id,
+                                    viewModel.nextPageURL != nil,
+                                    !viewModel.isLoadingNextPage,
+                                    viewModel.paginationErrorMessage == nil
+                                        else {
+                                    return
                                 }
-                            
+                                
+                                Task {
+                                    await viewModel.loadNextPage()
+                                }
+                            }
                         }
                         
                         if viewModel.isLoadingNextPage {
@@ -132,7 +140,7 @@ struct CharactersView: View {
                             }
                         }
                     } label: {
-                        Label("Sort", systemImage: "arrow.down.up")
+                        Label("Sort", systemImage: "arrow.up.arrow.down.up")
                     }
                 }
 
@@ -157,8 +165,6 @@ struct CharactersView: View {
                     }
                 }
             }
-
-
         }
         .task {
             await viewModel.fetchCharacters()
@@ -170,16 +176,21 @@ struct CharactersView: View {
     @Previewable @State var modelContext = ModelContext(
         try! ModelContainer(for: CachedCharacter.self)
     )
-
+    
     let apiClient = APIClient()
     let localStore = CharactersLocalStore(modelContext: modelContext)
-
+    
     let repository = CharactersRepositoryImpl(
         apiClient: apiClient,
         localStore: localStore
     )
-
-    CharactersView(repository: repository)
+    
+    CharactersView(
+        repository: repository,
+        episodesRepository: EpisodesRepositoryImpl(
+            apiClient: apiClient
+        )
+    )
 }
 
 

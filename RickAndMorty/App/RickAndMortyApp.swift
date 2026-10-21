@@ -30,6 +30,9 @@ private struct CharactersRootView: View {
                 localStore: CharactersLocalStore(
                     modelContext: modelContext
                 )
+            ),
+            episodesRepository: EpisodesRepositoryImpl(
+                apiClient: apiClient
             )
         )
     }
