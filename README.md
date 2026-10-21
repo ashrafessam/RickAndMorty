@@ -1,44 +1,91 @@
+
 # Rick & Morty Characters
 
-iOS app to browse Rick & Morty characters and view their details and episodes.
+A SwiftUI app that browses characters from the [Rick and Morty API](https://rickandmortyapi.com):
+search, status filter, sorting, pagination, offline caching, and a character detail screen with episodes.
 
-## Setup
+## Screenshots & Demo
 
-- Xcode 16.0+
-- iOS 18.0+
-- Swift 6
-- No external dependencies, no API key needed
-- Open `RickAndMorty.xcodeproj`, select a simulator, then Run (⌘R)
+Watch the demo video and screenshots in the Screenshots folder
 
-## Architecture
 
-**Pattern:** MVVM with the Repository pattern, built with SwiftUI and Swift Concurrency (async/await).
+## Setup Instructions
 
-- **View**: SwiftUI views that render state only.
-- **ViewModel**: `@MainActor` classes that own the screen state and logic (pagination, de-duplication, loading/error/empty states).
-- **Repository**: protocols live in the Domain layer. ViewModels depend on the protocol, never on the network or storage directly.
-- **Networking**: a dedicated networking layer that maps failures to a typed error.
+### Requirements
+- Xcode 16.0 or later
+- iOS 18.0 or later
+- Swift 6.0 or later
+
+### Build steps
+1. Clone the repository: `git clone https://github.com/ashrafessam/RickAndMorty`
+2. Open `RickAndMorty.xcodeproj`.
+3. Select the `RickAndMorty` scheme and an iOS 18+ simulator or device.
+4. Run with `Cmd + R`. Run unit tests with `Cmd + U`.
+
+### Dependency installation
+Dependencies are managed with Swift Package Manager and resolve automatically when the project is opened
+(if not: File > Packages > Resolve Package Versions).
+
+| Package | Version | Purpose 
+| [Kingfisher](https://github.com/onevcat/Kingfisher) | 8.14.0 | Image loading and caching (memory + disk) |
+
+No API key or other setup is required.
+
+## Architecture Overview
+
+### Pattern: MVVM + Repository
+- View (SwiftUI): renders state and forwards user actions.
+- ViewModel (`@MainActor @Observable`): owns screen state (loading, errors, pagination, search, filter, sort)
+  and depends only on repository protocols.
+- Repository: single source of data for the ViewModel. Fetches from the network and caches
+  results locally (SwiftData) for offline fallback.
+- Core: `APIClient` (URLSession + async/await) and `CharactersLocalStore` (SwiftData).
+
+Data flow: `View -> ViewModel -> Repository -> APIClient / LocalStore`
 
 ### Folder structure
-
 ```
-RickAndMorty/
-├── App/              # App entry point
-├── Core/
-│   ├── Networking/   # HTTP client, endpoints, errors
-│   └── Persistence/  # Local cache for offline viewing
-├── Domain/
-│   ├── Models/       # Character, Episode
-│   └── Repositories/ # Repository protocols
-└── Features/
-    ├── CharacterList/    # List screen (View + ViewModel)
-    └── CharacterDetail/  # Details screen (View + ViewModel)
+.
+├── README.md
+├── RickAndMorty.xcodeproj
+├── RickAndMorty/            # App source
+│   ├── App/                 # App entry point and dependency wiring
+│   ├── Core/
+│   │   ├── Networking/      # APIClient, APIConstants, APIError
+│   │   └── Persistence/     # CachedCharacter, CharactersLocalStore (SwiftData)
+│   ├── Domain/
+│   │   ├── Models/          # Character, CharactersPage, CharacterStatus, Episode
+│   │   └── Repositories/    # Repository protocols and implementations
+│   ├── Features/
+│   │   ├── CharacterList/   # CharactersView, CharactersViewModel, CharacterCell
+│   │   └── CharacterDetail/ # CharacterDetailView, CharacterDetailViewModel
+│   └── Resources/           # Assets
+├── RickAndMortyTests/       # Unit tests
+├── RickAndMortyUITests/     # UI tests
+└── Screenshots/             # Screenshots used in this README
 ```
 
 ### Dependency management
+- Constructor injection throughout. ViewModels and repositories depend on protocols
+  (`CharactersRepository`, `EpisodesRepository`, `APIClientProtocol`), never on concrete types.
+- Protocols let ViewModels be unit tested with mock repositories, with no network or database.
+- Third-party dependencies are managed with Swift Package Manager.
+- Navigation uses `NavigationStack`.
 
-Constructor injection throughout. Every dependency is behind a protocol so it can be replaced with a mock in tests.
+## Assumptions
+- The API is public and needs no authentication. Pagination follows the `info.next` URL returned by the API.
+- If a network request fails, the app falls back to locally cached characters.
+- The same `Character` model is used across layers (no separate DTO/domain mapping). This is a deliberate
+  choice to avoid boilerplate at this scope.
+- Minimum supported version is iOS 18.0.
 
-### Models
+## Accessibility & Appearance
+- Text uses system text styles and scales with Dynamic Type.
+- Status is conveyed with text, not color alone.
+- Semantic colors are used, so Light and Dark Mode are both supported.
 
-Domain models conform to `Decodable` directly with a custom `init(from:)`, instead of having a separate DTO layer. This keeps the codebase small for the scope of this project.
+## Testing
+Unit tests use mock implementations of the repository protocols to cover ViewModel behavior.
+
+## Known Limitations
+- Sorting and filtering apply only to the characters loaded so far.
